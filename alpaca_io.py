@@ -17,7 +17,9 @@ try:
     from alpaca.trading.client import TradingClient
     from alpaca.trading.enums import AssetClass, OrderClass, OrderSide, OrderType, TimeInForce
     from alpaca.trading.requests import GetAssetsRequest, MarketOrderRequest, TakeProfitRequest, StopLossRequest
-except ImportError:  # pragma: no cover - covered by runtime behavior
+    ALPACA_IMPORT_ERROR = None
+except ImportError as exc:  # pragma: no cover - covered by runtime behavior
+    ALPACA_IMPORT_ERROR = exc
     TradingClient = None
     StockHistoricalDataClient = None
     CryptoHistoricalDataClient = None
@@ -38,7 +40,11 @@ except ImportError:  # pragma: no cover - covered by runtime behavior
 
 def ensure_alpaca() -> None:
     if TradingClient is None:
-        raise RuntimeError("alpaca-py is required. Install it with `pip install alpaca-py pandas`.")
+        detail = f" Original import error: {ALPACA_IMPORT_ERROR}" if ALPACA_IMPORT_ERROR else ""
+        raise RuntimeError(
+            "Alpaca dependencies are not available. Install them with "
+            "`pip install -r requirements.txt`." + detail
+        )
 
 
 def utc_now() -> datetime:

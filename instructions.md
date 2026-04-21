@@ -20,7 +20,45 @@ The app automatically loads a local `.env` file from the project root before par
 Install dependencies:
 
 ```bash
-pip install -r requirements.txt
+venv/bin/pip install -r requirements.txt
+```
+
+## Python Environment
+
+This project already has a local virtual environment at:
+
+```bash
+venv/
+```
+
+Recommended ways to run the app:
+
+1. Activate the project virtualenv, then use `python`
+
+```bash
+source venv/bin/activate
+python main.py trade --help
+```
+
+2. Call the virtualenv interpreter directly
+
+```bash
+venv/bin/python main.py trade --help
+```
+
+This is not the only way. You can also install the dependencies into your global or pyenv-managed interpreter and run the app with that interpreter instead:
+
+```bash
+python -m pip install -r requirements.txt
+python main.py trade --help
+```
+
+The important part is consistency: the `python` used to run `main.py` must be the same interpreter where `alpaca-py` and `pandas` are installed.
+
+If you add or change dependencies, reinstall them into the same environment before running commands:
+
+```bash
+venv/bin/pip install -r requirements.txt
 ```
 
 ## `.env` Setup
@@ -103,13 +141,13 @@ Notes:
 Usage:
 
 ```bash
-python main.py trade [options]
+venv/bin/python main.py trade [options]
 ```
 
 Example:
 
 ```bash
-python main.py trade --mode paper --asset-class equities --symbols SPY QQQ --cash 5000 --max-positions 2 --poll-seconds 30 --dry-run
+venv/bin/python main.py trade --mode paper --asset-class equities --symbols SPY QQQ --cash 5000 --max-positions 2 --poll-seconds 30 --dry-run
 ```
 
 Parameters:
@@ -164,13 +202,13 @@ Behavior notes:
 Usage:
 
 ```bash
-python main.py backtest --start YYYY-MM-DD --end YYYY-MM-DD [options]
+venv/bin/python main.py backtest --start YYYY-MM-DD --end YYYY-MM-DD [options]
 ```
 
 Example:
 
 ```bash
-python main.py backtest --mode paper --start 2026-01-01 --end 2026-01-31 --asset-class equities --symbols SPY QQQ --cash 10000 --max-positions 2
+venv/bin/python main.py backtest --mode paper --start 2026-01-01 --end 2026-01-31 --asset-class equities --symbols SPY QQQ --cash 10000 --max-positions 2
 ```
 
 Parameters:
@@ -283,35 +321,71 @@ These are not CLI flags today. They are hardcoded in `config.py`.
 Use your `.env` default mode:
 
 ```bash
-python main.py trade --asset-class equities
+venv/bin/python main.py trade --asset-class equities
 ```
 
 Force paper mode:
 
 ```bash
-python main.py trade --mode paper --asset-class equities
+venv/bin/python main.py trade --mode paper --asset-class equities
 ```
 
 Force live mode:
 
 ```bash
-python main.py trade --mode live --asset-class equities --symbols SPY NVDA
+venv/bin/python main.py trade --mode live --asset-class equities --symbols SPY NVDA
 ```
 
 Crypto dry run:
 
 ```bash
-python main.py trade --mode paper --asset-class crypto --symbols BTC/USD ETH/USD --dry-run
+venv/bin/python main.py trade --mode paper --asset-class crypto --symbols BTC/USD ETH/USD --dry-run
 ```
 
 Backtest with explicit mode:
 
 ```bash
-python main.py backtest --mode paper --start 2026-01-01 --end 2026-01-31 --asset-class equities --symbols SPY QQQ AAPL
+venv/bin/python main.py backtest --mode paper --start 2026-01-01 --end 2026-01-31 --asset-class equities --symbols SPY QQQ AAPL
 ```
 
 Run optimization:
 
 ```bash
-python main.py backtest --mode paper --start 2026-01-01 --end 2026-01-31 --asset-class equities --optimize
+venv/bin/python main.py backtest --mode paper --start 2026-01-01 --end 2026-01-31 --asset-class equities --optimize
 ```
+
+## Troubleshooting
+
+### `RuntimeError: Alpaca dependencies are not available`
+
+Your interpreter is missing one or more required packages.
+
+Recommended fix:
+
+```bash
+venv/bin/pip install -r requirements.txt
+```
+
+Then run the app with the same interpreter:
+
+```bash
+venv/bin/python main.py backtest --start 2026-01-01 --end 2026-01-31
+```
+
+### `ConnectionError` or `Failed to resolve 'paper-api.alpaca.markets'`
+
+This is not a Python package problem. It means the app started correctly, but your machine could not reach Alpaca over the network.
+
+Typical causes:
+
+- no internet connection
+- DNS resolution problem
+- firewall, VPN, proxy, or corporate network restrictions
+- Alpaca endpoint temporarily unreachable
+
+The app needs network access for both:
+
+- `trade`
+- `backtest`
+
+because it fetches market data and asset metadata from Alpaca APIs.
