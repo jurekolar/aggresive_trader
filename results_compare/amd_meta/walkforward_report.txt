@@ -1,0 +1,26 @@
+Walk-Forward Report
+Window: 2024-01-01 to 2026-04-20
+Train days: 120
+Validation days: 30
+Best stop_buffer_pct: 0.001
+Best vwap_tolerance_pct: 0.0015
+Best target_r_multiple: 2.5
+Average finite validation profit factor: 3.18
+Median finite validation profit factor: 1.81
+Average validation net profit: 0.60
+Average validation win rate: 29.17%
+
+Validation breakdown by symbol:
+AMD: pnl=4.70, pf=1.92, trades=6
+META: pnl=-1.10, pf=0.81, trades=5
+
+Validation breakdown by day type:
+trend_up: pnl=3.60, pf=1.33, trades=11
+
+Fold summary:
+Fold 1: valid 2024-04-30 to 2024-05-29, pf=0.00, pnl=-4.39
+Fold 2: valid 2024-08-28 to 2024-09-26, pf=0.00, pnl=0.00
+Fold 3: valid 2024-12-26 to 2025-01-24, pf=0.00, pnl=-2.84
+Fold 4: valid 2025-04-25 to 2025-05-24, pf=11.57, pnl=0.81
+Fold 5: valid 2025-08-23 to 2025-09-21, pf=3.86, pnl=5.52
+Fold 6: valid 2025-12-21 to 2026-01-19, pf=3.62, pnl=4.51

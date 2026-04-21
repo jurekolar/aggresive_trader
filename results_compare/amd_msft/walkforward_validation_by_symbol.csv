@@ -1,0 +1,3 @@
+symbol,trades,net_profit,win_rate,avg_pnl,avg_r_multiple,profit_factor,partial_exits,stop_exits,target_exits
+AMD,6,4.703792098560305,0.5,0.7839653497600508,0.1370920989193481,1.9155049040948056,3,2,2
+MSFT,1,1.7716379184368778,1.0,1.7716379184368778,1.3622656937613475,inf,1,0,1
