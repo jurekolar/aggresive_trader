@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import os
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -9,6 +7,7 @@ from typing import Iterable
 import pandas as pd
 
 from config import AppConfig, UniverseConfig
+from env_config import resolve_alpaca_credentials
 from strategy import Signal
 
 try:
@@ -52,15 +51,13 @@ def one_minute_timeframe():
 
 
 class AlpacaIO:
-    def __init__(self, paper: bool = True, config: AppConfig | None = None) -> None:
+    def __init__(self, mode: str = "paper", config: AppConfig | None = None) -> None:
         ensure_alpaca()
         self.config = config or AppConfig()
-        key = os.getenv("ALPACA_API_KEY")
-        secret = os.getenv("ALPACA_SECRET_KEY")
-        if not key or not secret:
-            raise RuntimeError("ALPACA_API_KEY and ALPACA_SECRET_KEY must be set.")
-        self.paper = paper
-        self.trading_client = TradingClient(key, secret, paper=paper)
+        normalized_mode = mode.strip().lower()
+        key, secret = resolve_alpaca_credentials(normalized_mode)
+        self.paper = normalized_mode == "paper"
+        self.trading_client = TradingClient(key, secret, paper=self.paper)
         self.stock_data = StockHistoricalDataClient(key, secret)
         self.crypto_data = CryptoHistoricalDataClient(key, secret)
 

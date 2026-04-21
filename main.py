@@ -9,6 +9,7 @@ import pandas as pd
 
 from alpaca_io import AlpacaIO, write_csv, signal_to_row
 from config import AppConfig, StrategyConfig, optimization_grid
+from env_config import load_dotenv, resolve_mode
 from strategy import (
     BacktestTrade,
     build_signal,
@@ -25,7 +26,7 @@ def parse_args() -> argparse.Namespace:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     trade = subparsers.add_parser("trade", help="Run live or paper trading loop.")
-    trade.add_argument("--mode", choices=["paper", "live"], default="paper")
+    trade.add_argument("--mode", choices=["paper", "live"], default=None)
     trade.add_argument("--asset-class", choices=["all", "equities", "crypto"], default="all")
     trade.add_argument("--symbols", nargs="*", default=None)
     trade.add_argument("--cash", type=float, default=1_000.0)
@@ -37,6 +38,7 @@ def parse_args() -> argparse.Namespace:
     backtest = subparsers.add_parser("backtest", help="Backtest strategy on Alpaca historical data.")
     backtest.add_argument("--start", required=True)
     backtest.add_argument("--end", required=True)
+    backtest.add_argument("--mode", choices=["paper", "live"], default=None)
     backtest.add_argument("--asset-class", choices=["all", "equities", "crypto"], default="all")
     backtest.add_argument("--symbols", nargs="*", default=None)
     backtest.add_argument("--cash", type=float, default=1_000.0)
@@ -94,7 +96,8 @@ def session_slices(bars: pd.DataFrame, timezone: str) -> list[pd.DataFrame]:
 
 def trade_command(args: argparse.Namespace) -> None:
     config = app_config_from_args(args)
-    io = AlpacaIO(paper=args.mode == "paper", config=config)
+    mode = resolve_mode(args.mode)
+    io = AlpacaIO(mode=mode, config=config)
     clock = io.market_clock()
     if not clock.is_open:
         raise SystemExit(f"Market is closed. Next open: {clock.next_open}")
@@ -215,7 +218,7 @@ def optimize_backtest(io: AlpacaIO, args: argparse.Namespace, base_config: AppCo
 
 def backtest_command(args: argparse.Namespace) -> None:
     config = app_config_from_args(args)
-    io = AlpacaIO(paper=True, config=config)
+    io = AlpacaIO(mode=resolve_mode(args.mode), config=config)
     output_dir = Path(config.results_dir)
     if args.optimize:
         rows, best = optimize_backtest(io, args, config)
@@ -246,6 +249,7 @@ def backtest_command(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
+    load_dotenv()
     args = parse_args()
     if args.command == "trade":
         trade_command(args)

@@ -2,115 +2,105 @@
 
 ## Overview
 
-This project exposes a single CLI entrypoint:
+This project exposes one CLI entrypoint:
 
 ```bash
 python main.py <command> [options]
 ```
 
-Available commands:
+Commands:
 
-- `trade`: runs the trading loop against Alpaca in `paper` or `live` mode.
-- `backtest`: runs a historical backtest using Alpaca market data.
+- `trade`: run the Alpaca trading loop
+- `backtest`: run the strategy on historical Alpaca data
 
-The project reads Alpaca credentials from environment variables:
-
-- `ALPACA_API_KEY`
-- `ALPACA_SECRET_KEY`
-
-There is no built-in `.env` loader in the codebase. If you want to use a `.env` file, you must load it yourself in your shell before running the commands.
+The app automatically loads a local `.env` file from the project root before parsing CLI arguments.
 
 ## Install
 
-Install dependencies first:
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-If needed, the minimum runtime dependencies mentioned in the code are:
+## `.env` Setup
+
+Create your local env file:
 
 ```bash
-pip install alpaca-py pandas
+cp .env.example .env
 ```
 
-## Alpaca Keys
+Then replace the placeholder values with your real Alpaca keys.
 
-### How the app uses credentials
-
-The code always reads:
+Recommended `.env`:
 
 ```bash
-ALPACA_API_KEY
-ALPACA_SECRET_KEY
+ALPACA_DEFAULT_MODE=paper
+
+ALPACA_PAPER_API_KEY=your_paper_key
+ALPACA_PAPER_SECRET_KEY=your_paper_secret
+
+ALPACA_LIVE_API_KEY=your_live_key
+ALPACA_LIVE_SECRET_KEY=your_live_secret
 ```
 
-The `--mode` flag on `trade` decides whether Alpaca trading is paper or live:
+### Recommended switching model
 
-- `--mode paper`: uses the paper trading environment.
-- `--mode live`: uses the live trading environment.
+Use both:
 
-Important: the variable names do not change between paper and live. You switch environments by exporting different values before running the command.
+- keep both paper and live credentials in `.env`
+- set `ALPACA_DEFAULT_MODE` to the environment you use most often
+- override with `--mode paper` or `--mode live` when needed
 
-### Paper trading keys
+That is better than editing `.env` each time. It keeps secrets stable and makes one-off runs explicit.
 
-In your terminal:
+### Variable precedence
 
-```bash
-export ALPACA_API_KEY="your_paper_key"
-export ALPACA_SECRET_KEY="your_paper_secret"
-python main.py trade --mode paper
-```
+Resolution order is:
 
-### Live trading keys
+1. CLI `--mode` if provided
+2. `.env` `ALPACA_DEFAULT_MODE`
+3. fallback default: `paper`
 
-In your terminal:
+Credential lookup for the chosen mode:
 
-```bash
-export ALPACA_API_KEY="your_live_key"
-export ALPACA_SECRET_KEY="your_live_secret"
-python main.py trade --mode live
-```
+- `paper` uses `ALPACA_PAPER_API_KEY` and `ALPACA_PAPER_SECRET_KEY`
+- `live` uses `ALPACA_LIVE_API_KEY` and `ALPACA_LIVE_SECRET_KEY`
 
-### Backtest keys
+If the mode-specific variables are missing, the app falls back to:
 
-Backtests also instantiate the Alpaca clients, so the same variables must be set even though no live order is sent:
+- `ALPACA_API_KEY`
+- `ALPACA_SECRET_KEY`
 
-```bash
-export ALPACA_API_KEY="your_paper_or_live_key"
-export ALPACA_SECRET_KEY="your_paper_or_live_secret"
-python main.py backtest --start 2026-01-01 --end 2026-01-31
-```
+If the same variable already exists in your shell, the shell value wins over `.env`.
 
-### Recommended shell setup
+### Supported env variables
 
-Because the app only reads environment variables, the cleanest setup is to keep separate shell snippets for paper and live.
+Preferred:
 
-Example `paper` setup:
+- `ALPACA_DEFAULT_MODE`
+- `ALPACA_PAPER_API_KEY`
+- `ALPACA_PAPER_SECRET_KEY`
+- `ALPACA_LIVE_API_KEY`
+- `ALPACA_LIVE_SECRET_KEY`
 
-```bash
-export ALPACA_API_KEY="your_paper_key"
-export ALPACA_SECRET_KEY="your_paper_secret"
-```
+Also accepted:
 
-Example `live` setup:
+- `ALPACA_ENV`
+- `ALPACA_API_KEY`
+- `ALPACA_SECRET_KEY`
 
-```bash
-export ALPACA_API_KEY="your_live_key"
-export ALPACA_SECRET_KEY="your_live_secret"
-```
+Notes:
 
-Then paste the correct pair into the terminal before running the command you want.
+- `ALPACA_ENV` is treated as an alias for `ALPACA_DEFAULT_MODE`
+- `.env` is git-ignored, so your local secrets should not be committed
 
-If you want persistent shell config, add the exports to your `~/.zshrc`, but do not keep both paper and live assigned to the same variable names at the same time. Override them intentionally before each run.
-
-## Command Reference
+## Commands
 
 ## `trade`
 
-Runs the live trading loop until the market is near close or the daily loss limit is hit.
-
-Basic usage:
+Usage:
 
 ```bash
 python main.py trade [options]
@@ -122,65 +112,56 @@ Example:
 python main.py trade --mode paper --asset-class equities --symbols SPY QQQ --cash 5000 --max-positions 2 --poll-seconds 30 --dry-run
 ```
 
-### Parameters
+Parameters:
 
 - `--mode {paper,live}`
-  - Default: `paper`
-  - Selects whether the trading client connects to Alpaca paper trading or live trading.
+  - Optional
+  - Overrides `.env` mode selection for this run
 
 - `--asset-class {all,equities,crypto}`
   - Default: `all`
-  - Controls which market universe to scan.
-  - `all` means both equities and crypto.
+  - Scans equities, crypto, or both
 
 - `--symbols SYMBOL [SYMBOL ...]`
-  - Default: not set
-  - Optional explicit symbol list.
-  - If omitted, the app uses the built-in curated universe from `config.py`.
-  - Examples:
-    - equities: `SPY AAPL NVDA`
-    - crypto: `BTC/USD ETH/USD`
+  - Optional
+  - Explicit symbol list
+  - If omitted, the app uses the built-in universe from `config.py`
 
 - `--cash FLOAT`
   - Default: `1000.0`
-  - Sets the capital base used for position sizing and risk calculations.
+  - Capital base used for sizing and risk calculations
 
 - `--max-positions INT`
   - Default: `2`
-  - Maximum number of open positions allowed at once.
+  - Maximum number of simultaneous open positions
 
 - `--poll-seconds INT`
   - Default: `20`
-  - Delay between trading loop checks.
+  - Delay between loop iterations
 
 - `--allow-short`
-  - Default: off
-  - Enables short-side signals. Without this flag, the strategy only takes long setups.
+  - Optional flag
+  - Enables short-side signals
 
 - `--dry-run`
-  - Default: off
-  - Generates signals but does not place orders.
-  - Useful for verifying the strategy flow safely.
+  - Optional flag
+  - Builds signals without placing orders
 
-### Trade output
-
-When signals are generated, the app writes:
+Output:
 
 ```text
 results/trade_signals.csv
 ```
 
-### Notes
+Behavior notes:
 
-- The trading loop checks Alpaca market hours and stops if the market is closed.
-- When fewer than 5 minutes remain before close, it closes all positions and exits.
-- If the configured daily loss limit is hit, it closes all positions and exits.
+- the app exits if the market is closed
+- the app closes all positions when fewer than 5 minutes remain before close
+- the app closes all positions if the daily loss limit is hit
 
 ## `backtest`
 
-Runs the strategy on historical Alpaca data and writes CSV outputs.
-
-Basic usage:
+Usage:
 
 ```bash
 python main.py backtest --start YYYY-MM-DD --end YYYY-MM-DD [options]
@@ -189,66 +170,65 @@ python main.py backtest --start YYYY-MM-DD --end YYYY-MM-DD [options]
 Example:
 
 ```bash
-python main.py backtest --start 2026-01-01 --end 2026-01-31 --asset-class equities --symbols SPY QQQ --cash 10000 --max-positions 2
+python main.py backtest --mode paper --start 2026-01-01 --end 2026-01-31 --asset-class equities --symbols SPY QQQ --cash 10000 --max-positions 2
 ```
 
-### Parameters
+Parameters:
 
 - `--start DATE`
-  - Required.
-  - Start date for historical data.
-  - Example: `2026-01-01`
+  - Required
+  - Historical start date
 
 - `--end DATE`
-  - Required.
-  - End date for historical data.
-  - Example: `2026-01-31`
+  - Required
+  - Historical end date
+
+- `--mode {paper,live}`
+  - Optional
+  - Uses the same mode resolution as `trade`
 
 - `--asset-class {all,equities,crypto}`
   - Default: `all`
-  - Chooses whether to backtest equities, crypto, or both.
+  - Backtest equities, crypto, or both
 
 - `--symbols SYMBOL [SYMBOL ...]`
-  - Default: not set
-  - Optional explicit list of symbols to backtest.
-  - If omitted, the app uses the default universe from `config.py`.
+  - Optional
+  - Explicit symbol list
+  - If omitted, the app uses the built-in universe from `config.py`
 
 - `--cash FLOAT`
   - Default: `1000.0`
-  - Starting capital used for position sizing and summary metrics.
+  - Starting capital for sizing and performance summary
 
 - `--max-positions INT`
   - Default: `2`
-  - Passed into strategy config for position limit behavior.
+  - Passed into strategy configuration
 
 - `--allow-short`
-  - Default: off
-  - Enables short signals in the backtest.
+  - Optional flag
+  - Enables short signals in the backtest
 
 - `--optimize`
-  - Default: off
-  - Runs a parameter sweep across a predefined optimization grid in `config.py`.
-  - Writes optimization results instead of the normal trade list output.
+  - Optional flag
+  - Runs the parameter sweep defined in `config.py`
 
-### Backtest output
-
-Without `--optimize`, the app writes:
+Output without `--optimize`:
 
 ```text
 results/backtest_trades.csv
 results/backtest_summary.csv
 ```
 
-With `--optimize`, the app writes:
+Output with `--optimize`:
 
 ```text
 results/optimization.csv
 results/best_config.csv
 ```
 
-## Default Universe
+## Default Symbol Universe
 
-If you do not pass `--symbols`, the app uses these built-in defaults from `config.py`.
+If `--symbols` is not provided, the app uses these built-in defaults from `config.py`.
 
 Equities:
 
@@ -275,9 +255,9 @@ Crypto:
 - `ETH/USD`
 - `SOL/USD`
 
-## Strategy Config Defaults
+## Strategy Defaults
 
-These are not CLI parameters today, but they affect trading and backtesting behavior because they are hardcoded in `config.py`.
+These are not CLI flags today. They are hardcoded in `config.py`.
 
 - `opening_range_minutes = 15`
 - `impulse_lookback_bars = 20`
@@ -298,55 +278,40 @@ These are not CLI parameters today, but they affect trading and backtesting beha
 - `slippage_bps = 5.0`
 - `commission_per_order = 0.0`
 
-## Common Examples
+## Examples
 
-Paper trading, equities only:
+Use your `.env` default mode:
 
 ```bash
-export ALPACA_API_KEY="your_paper_key"
-export ALPACA_SECRET_KEY="your_paper_secret"
+python main.py trade --asset-class equities
+```
+
+Force paper mode:
+
+```bash
 python main.py trade --mode paper --asset-class equities
 ```
 
-Paper trading, custom crypto symbols, no live orders:
+Force live mode:
 
 ```bash
-export ALPACA_API_KEY="your_paper_key"
-export ALPACA_SECRET_KEY="your_paper_secret"
-python main.py trade --mode paper --asset-class crypto --symbols BTC/USD ETH/USD --dry-run
-```
-
-Live trading with explicit symbols:
-
-```bash
-export ALPACA_API_KEY="your_live_key"
-export ALPACA_SECRET_KEY="your_live_secret"
 python main.py trade --mode live --asset-class equities --symbols SPY NVDA
 ```
 
-Backtest a custom equity set:
+Crypto dry run:
 
 ```bash
-export ALPACA_API_KEY="your_paper_key"
-export ALPACA_SECRET_KEY="your_paper_secret"
-python main.py backtest --start 2026-01-01 --end 2026-01-31 --asset-class equities --symbols SPY QQQ AAPL
+python main.py trade --mode paper --asset-class crypto --symbols BTC/USD ETH/USD --dry-run
+```
+
+Backtest with explicit mode:
+
+```bash
+python main.py backtest --mode paper --start 2026-01-01 --end 2026-01-31 --asset-class equities --symbols SPY QQQ AAPL
 ```
 
 Run optimization:
 
 ```bash
-export ALPACA_API_KEY="your_paper_key"
-export ALPACA_SECRET_KEY="your_paper_secret"
-python main.py backtest --start 2026-01-01 --end 2026-01-31 --asset-class equities --optimize
+python main.py backtest --mode paper --start 2026-01-01 --end 2026-01-31 --asset-class equities --optimize
 ```
-
-## Important Limitation
-
-The current codebase does not support separate variable names like `ALPACA_PAPER_API_KEY` and `ALPACA_LIVE_API_KEY`.
-
-It only supports:
-
-- `ALPACA_API_KEY`
-- `ALPACA_SECRET_KEY`
-
-So for paper vs live, you must replace the exported values in your shell before running the command.
