@@ -34,7 +34,7 @@ def parse_args() -> argparse.Namespace:
     trade.add_argument("--asset-class", choices=["all", "equities", "crypto"], default="all")
     trade.add_argument("--symbols", nargs="*", default=None)
     trade.add_argument("--cash", type=float, default=1_000.0)
-    trade.add_argument("--max-positions", type=int, default=2)
+    trade.add_argument("--max-positions", type=int, default=None)
     trade.add_argument("--poll-seconds", type=int, default=20)
     trade.add_argument("--allow-short", action="store_true")
     trade.add_argument("--dry-run", action="store_true")
@@ -46,7 +46,7 @@ def parse_args() -> argparse.Namespace:
     backtest.add_argument("--asset-class", choices=["all", "equities", "crypto"], default="all")
     backtest.add_argument("--symbols", nargs="*", default=None)
     backtest.add_argument("--cash", type=float, default=1_000.0)
-    backtest.add_argument("--max-positions", type=int, default=2)
+    backtest.add_argument("--max-positions", type=int, default=None)
     backtest.add_argument("--allow-short", action="store_true")
     backtest.add_argument("--optimize", action="store_true")
     backtest.add_argument("--walk-forward", action="store_true")
@@ -57,11 +57,11 @@ def parse_args() -> argparse.Namespace:
 
 
 def app_config_from_args(args: argparse.Namespace) -> AppConfig:
-    strategy = replace(
-        StrategyConfig(),
-        max_positions=args.max_positions,
-        allow_short=getattr(args, "allow_short", False),
-    )
+    strategy = StrategyConfig()
+    if args.max_positions is not None:
+        strategy = replace(strategy, max_positions=args.max_positions)
+    if getattr(args, "allow_short", False):
+        strategy = replace(strategy, allow_short=True)
     return replace(
         AppConfig(),
         cash=args.cash,
